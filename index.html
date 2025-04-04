@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rural Property Scout</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <h2>🏡 Zillow or Address Lookup</h2>
+  <input id="input" placeholder="Paste Zillow link or address" />
+  <label for="anchorType">🏙️ Closest "civilized" place type:</label>
+    <select id="anchorType">
+        <option value="any">Any</option>
+        <option value="grocery_or_supermarket">Grocery Store</option>
+        <option value="school">School</option>
+        <option value="hospital">Hospital</option>
+    </select>
+  <button onclick="lookup()">Lookup</button>
+  <div id="loading" style="display:none; text-align:center; margin:1rem;">
+    <span>⏳ Searching...</span>
+  </div>
+  
+  <div class="results" id="results"></div>
+
+  <script src="script.js"></script>
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBRQy3FxhEsW347s7LBfzG5WsDR_IE8RKA&libraries=places"
+    async
+    defer
+  ></script>
+</body>
+</html>
