@@ -50,7 +50,18 @@ function getGeocodedPlace(address) {
       if (status !== 'OK' || !results.length) {
         reject('❌ Could not find location.');
       } else {
-        resolve(results[0]);
+        const place = results[0];
+        const components = place.address_components || [];
+
+        const hasStreet = components.some(c =>
+          c.types.includes("street_number") || c.types.includes("route")
+        );
+
+        if (!hasStreet) {
+          alert("⚠️ Warning: this address might be missing a street number or street name.");
+        }
+
+        resolve(place);
       }
     });
   });
@@ -112,6 +123,8 @@ function showFavoriteButton(place, elevation) {
       Zestimate: "",
       Zacreage: ""
     };
+
+    alert(`(TODO) Implement this data to Google Sheet:\n${JSON.stringify(data, null, 2)}`);
 
     fetch('https://script.google.com/macros/s/AKfycby0-PiqADl27Q1cfwSMc1gq4s6yhgBtlPd-RlLXRn2XZWbUSoXMEnIn-zydqCfquaEYkA/exec', {
       method: 'POST',

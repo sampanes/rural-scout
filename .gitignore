@@ -5,3 +5,4 @@
 # Local-only script that injects dev key
 fill-local-key.sh
 .vscode
+*.txt
