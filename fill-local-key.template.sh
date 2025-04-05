@@ -3,4 +3,4 @@
 
 DEV_KEY="YOUR_DEV_KEY_HERE"
 
-find . -type f \( -name '*.js' -o -name '*.html' \) -exec sed -i '' "s/__API_KEY__/$DEV_KEY/g" {} +
+find . -type f \( -name "*.js" -o -name "*.html" \) -exec sed -i "s|__API_KEY__|$DEV_KEY|g" {} +
