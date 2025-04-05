@@ -70,10 +70,10 @@ function renderInitialResults(place, elevation, resultsDiv) {
 
   resultsDiv.innerHTML = `
     <p>📍 <strong>${fullAddr}</strong></p>
-    <p>🗻 Elevation: ${elevation ? elevation + " meters" : "N/A"}</p>
+    <p>🗻 Elevation: ${elevation ? elevation + " ft" : "N/A"}</p>
     <a class="map-link" href="https://www.google.com/maps/place/${lat},${lng}" target="_blank">📌 View on Google Maps</a>
     <a class="map-link" href="https://www.google.com/maps/search/${encodeURIComponent(typeName)}+near+${lat},${lng}" target="_blank">🔎 Nearby ${typeName}</a>
-    <a class="map-link" href="https://www.google.com/maps/search/${fallbackType}+near+${lat},${lng}" target="_blank">🔁 Also check ${fallbackType}</a>
+    <a class="map-link" href="https://www.google.com/maps/search/${fallbackType}+near+${lat},${lng}" target="_blank">🔎 Nearby ${fallbackType}</a>
   `;
 }
 
@@ -101,11 +101,11 @@ function showFavoriteButton(place, elevation) {
     const state = getComponent("administrative_area_level_1");
 
     const data = {
-      Name: place.name || "(unnamed)",
+      Name: place.name || "",
       Address: addr,
       City: city,
       State: state,
-      Elevation: elevation != null ? `${elevation} m` : "",  // Now includes elevation
+      Elevation: elevation != null ? `${elevation} ft` : "",
       Zestimate: "",
       Zacreage: ""
     };
@@ -116,7 +116,7 @@ function showFavoriteButton(place, elevation) {
   container.appendChild(btn);
 }
 
-async function findNearestAnchor(originLatLng, resultsDiv) {
+async function findNearestAnchor(originLatLng, elevation, resultsDiv) {
   const anchorType = document.getElementById("anchorType").value;
 
   const map = new google.maps.Map(document.createElement("div"));
@@ -231,7 +231,9 @@ function getElevation(latlng) {
     const elevator = new google.maps.ElevationService();
     elevator.getElevationForLocations({ locations: [latlng] }, (results, status) => {
       if (status === "OK" && results.length) {
-        resolve(Math.round(results[0].elevation)); // in meters
+        const meters = results[0].elevation;
+        const feet = Math.round(meters * 3.28084);
+        resolve(feet); // return in feet!
       } else {
         resolve(null); // Gracefully handle failure
       }
