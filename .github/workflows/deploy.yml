@@ -19,7 +19,9 @@ jobs:
       - name: 🔧 Inject full Maps script URL
         run: |
           echo "Injecting key..."
-          find . -type f \( -name '*.html' -o -name '*.js' \) -exec sed -i "s|__API_KEY__|https://maps.googleapis.com/maps/api/js?key=${{ secrets.GOOGLE_MAPS_API_KEY }}&libraries=places|g" {} +
+          find . -type f \( -name '*.html' -o -name '*.js' \) \
+            -exec sed -i "s|__API_KEY__|https://maps.googleapis.com/maps/api/js?key=${{ secrets.GOOGLE_MAPS_API_KEY }}&libraries=places|g" {} +
+
       - name: 🕵️ Show injected script line
         run: grep 'maps.googleapis.com/maps/api/js' index.html
 
