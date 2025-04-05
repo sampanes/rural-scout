@@ -1,4 +1,4 @@
-const API_KEY = 'AIzaSyBRQy3FxhEsW347s7LBfzG5WsDR_IE8RKA';
+const API_KEY = '__API_KEY__'; // placeholder
 
 function extractAddress(text) {
   if (text.includes('zillow.com')) {
