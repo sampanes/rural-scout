@@ -1,0 +1,23 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v3
+
+      - name: 🔧 Inject API key into JS and HTML
+        run: |
+          find . -type f \\( -name '*.js' -o -name '*.html' \\) -exec sed -i 's|__API_KEY__|${{ secrets.GOOGLE_MAPS_API_KEY }}|g' {} +
+
+      - name: 🚀 Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: . # adjust if you're using a subfolder
