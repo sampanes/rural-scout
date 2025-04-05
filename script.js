@@ -1,5 +1,3 @@
-const API_KEY = '__API_KEY__'; // placeholder
-
 function extractAddress(text) {
   if (text.includes('zillow.com')) {
     const match = text.match(/\/([0-9a-zA-Z\-]+)-([a-zA-Z\-]+)-([a-zA-Z]{2})-(\d{5})/);
