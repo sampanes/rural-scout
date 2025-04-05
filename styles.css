@@ -1,0 +1,86 @@
+a.map-link {
+    display: block;
+    text-align: center;
+    background-color: #4f46e5; /* indigo-600 */
+    color: white;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    text-decoration: none;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+  }
+  
+  a.map-link:hover {
+    background-color: #3730a3; /* indigo-800 */
+    transform: scale(1.03);
+  }
+  
+  a.map-link:active {
+    background-color: #312e81; /* indigo-900 */
+    transform: scale(0.98);
+  }
+
+  a.map-link:link,
+  a.map-link:visited,
+  a.map-link:hover,
+  a.map-link:active {
+    color: white;
+  }
+
+  .map-drive {
+    margin-top: 1rem;
+    background: #f9fafb;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    font-size: 1rem;
+  }
+  .map-drive p {
+    margin: 0.25rem 0;
+  }
+
+  body {
+    font-family: sans-serif;
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 1rem;
+  }
+  input, button {
+    width: 100%;
+    padding: 0.7rem;
+    font-size: 1rem;
+    margin: 0.5rem 0;
+  }
+  .results a {
+    display: block;
+    margin: 0.5rem 0;
+    color: blue;
+  }
+
+  #loading {
+    display: none;
+    text-align: center;
+    margin: 1rem 0;
+    font-size: 1rem;
+    color: #555;
+  }
+  
+  #loading.visible {
+    display: block;
+  }
+
+  select {
+    width: 100%;
+    padding: 0.7rem;
+    font-size: 1rem;
+    margin: 0.5rem 0;
+    border-radius: 0.5rem;
+    border: 1px solid #ccc;
+    background-color: white;
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg fill='gray' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg'><path d='M7 7l3-3 3 3H7z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 1rem;
+  }
+  

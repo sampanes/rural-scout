@@ -1,0 +1,6 @@
+*.bak
+# Don't track files with filled keys
+*.local.js
+*.local.html
+# Local-only script that injects dev key
+fill-local-key.sh
