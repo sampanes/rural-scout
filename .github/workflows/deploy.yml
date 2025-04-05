@@ -19,7 +19,8 @@ jobs:
       - name: 🔧 Inject API key into HTML/JS files
         run: |
           echo "KEY BEING USED: ${{ secrets.GOOGLE_MAPS_API_KEY }}"
-          find . -type f \( -name '*.js' -o -name '*.html' \) -exec sed -i "s|__API_KEY__|${{ secrets.GOOGLE_MAPS_API_KEY }}|g" {} +
+          API_ESCAPED=$(printf '%s\n' "${{ secrets.GOOGLE_MAPS_API_KEY }}" | sed 's/[&/]/\\&/g')
+          find . -type f \( -name '*.js' -o -name '*.html' \) -exec sed -i "s|__API_KEY__|$API_ESCAPED|g" {} +
           echo "✅ Injection command complete"
 
       - name: 🕵️ Check for leftover placeholders
