@@ -14,6 +14,8 @@ jobs:
       - name: 🔧 Inject API key into JS and HTML
         run: |
           find . -type f \( -name '*.js' -o -name '*.html' \) -exec sed -i "s|__API_KEY__|${{ secrets.GOOGLE_MAPS_API_KEY }}|g" {} +
+      - name: 🚨 Check HTML for API key
+        run: grep API_KEY index.html || echo "API key not found"
 
       - name: 🚀 Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
