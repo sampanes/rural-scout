@@ -8,149 +8,152 @@ function extractAddress(text) {
   return text.trim();
 }
 
-function lookup() {
+async function lookup() {
     document.getElementById('loading').classList.add('visible');
     const rawInput = document.getElementById('input').value;
     const cleaned = extractAddress(rawInput);
     const resultsDiv = document.getElementById('results');
     resultsDiv.innerHTML = `<p>Looking up: <strong>${cleaned}</strong>...</p>`;
-
+  
     const geocoder = new google.maps.Geocoder();
-    geocoder.geocode({ address: cleaned }, (results, status) => {
+  
+    // Wrap geocoder.geocode in a Promise
+    const place = await new Promise((resolve, reject) => {
+      geocoder.geocode({ address: cleaned }, (results, status) => {
         if (status !== 'OK' || !results.length) {
-        resultsDiv.innerHTML = `<p>❌ Could not find location.</p>`;
-        return;
+          reject('❌ Could not find location.');
+        } else {
+          resolve(results[0]);
         }
-
-        const place = results[0];
-        const location = place.geometry.location;
-        const lat = location.lat();
-        const lng = location.lng();
-        const fullAddr = place.formatted_address;
-
-        resultsDiv.innerHTML = `
-        <p>📍 <strong>${fullAddr}</strong></p>
-        <a class="map-link" href="https://www.google.com/maps/place/${lat},${lng}" target="_blank">📌 View on Google Maps</a>
-        <a class="map-link" href="https://www.google.com/maps/search/schools+near+${lat},${lng}" target="_blank">🏫 Schools Nearby</a>
-        <a class="map-link" href="https://www.google.com/maps/search/hospitals+near+${lat},${lng}" target="_blank">🏥 Hospitals Nearby</a>
-        `;
-
-        document.getElementById('loading').classList.remove('visible');
-        findNearestAnchor(location, resultsDiv);
+      });
+    }).catch(err => {
+      resultsDiv.innerHTML = `<p>${err}</p>`;
+      document.getElementById('loading').classList.remove('visible');
     });
-}
-
-function findNearestAnchor(originLatLng, resultsDiv) {
+  
+    if (!place) return;
+  
+    const location = place.geometry.location;
+    const lat = location.lat();
+    const lng = location.lng();
+    const fullAddr = place.formatted_address;
+  
+    resultsDiv.innerHTML = `
+      <p>📍 <strong>${fullAddr}</strong></p>
+      <a class="map-link" href="https://www.google.com/maps/place/${lat},${lng}" target="_blank">📌 View on Google Maps</a>
+      <a class="map-link" href="https://www.google.com/maps/search/schools+near+${lat},${lng}" target="_blank">🏫 Schools Nearby</a>
+      <a class="map-link" href="https://www.google.com/maps/search/hospitals+near+${lat},${lng}" target="_blank">🏥 Hospitals Nearby</a>
+    `;
+  
+    document.getElementById('loading').classList.remove('visible');
+    await findNearestAnchor(location, resultsDiv);
+  }
+  
+  async function findNearestAnchor(originLatLng, resultsDiv) {
     const anchorType = document.getElementById("anchorType").value;
   
-    const map = new google.maps.Map(document.createElement('div'));
-    const placesService = new google.maps.places.PlacesService(map);
+    const { searchNearby } = await google.maps.importLibrary("places");
+    const { SearchNearbyRanker } = await google.maps.importLibrary("core");    
   
-    const request = {
-      location: originLatLng,
-      radius: 50000,
-    };
-    if (anchorType !== "any") {
-      request.type = anchorType;
+    // Run searchNearby using keyword OR includedPrimaryTypes fallback
+    const results = await searchNearby({
+      locationBias: originLatLng,
+      keyword: anchorType !== "any" ? anchorType : undefined,
+      maxResultCount: 5,
+      includedPrimaryTypes: anchorType === "any" ? ["restaurant", "grocery_or_supermarket", "hospital", "school", "airport"] : undefined,
+      ranker: SearchNearbyRanker.POPULARITY,
+    });
+  
+    if (!results || !results.length) {
+      resultsDiv.innerHTML += `<p>🚫 No nearby place found.</p>`;
+      return;
     }
   
-    placesService.nearbySearch(request, (places, status) => {
-      if (status !== 'OK' || !places.length) {
-        resultsDiv.innerHTML += `<p>🚫 No nearby place found.</p>`;
-        return;
-      }
+    const topPlaces = results;
+    const destinations = topPlaces.map((p) => p.location);
   
-      const topPlaces = places.slice(0, 5);
-      const destinations = topPlaces.map(p => p.geometry.location);
-  
-      const distanceService = new google.maps.DistanceMatrixService();
-      distanceService.getDistanceMatrix(
-        {
-          origins: [originLatLng],
-          destinations: destinations,
-          travelMode: google.maps.TravelMode.DRIVING,
-        },
-        (response, status) => {
-            if (status !== 'OK') {
-            resultsDiv.innerHTML += `<p>🚫 Failed to get drive times.</p>`;
-            return;
-            }
-
-            const elements = response.rows[0].elements;
-            const driveTimes = elements.map((e, i) => ({
-                minutes: e.status === 'OK' ? e.duration.value / 60 : Infinity,
-                durationText: e.status === 'OK' ? e.duration.text : 'n/a',
-                place: topPlaces[i],
-                index: i,
-            }));
-
-            // Sort by time, just to be sure
-            driveTimes.sort((a, b) => a.minutes - b.minutes);
-
-            // Simple city heuristic
-            // Drive time clustering heuristic v2
-            const validResults = driveTimes.filter(e => e.minutes < Infinity);
-            const closest = driveTimes[0];
-
-            let cityStatus = '';
-            if (closest.minutes <= 7 && validResults.length >= 5) {
-                cityStatus = "🧠 Looks like you're IN a city";
-            } else if (closest.minutes <= 13 && validResults.length >= 3) {
-                cityStatus = "🧠 You're NEAR a city";
-            } else if (closest.minutes <= 29 && validResults.length >= 3) {
-                cityStatus = "🧠 We're looking at the outskirts";    
-            } else {
-                cityStatus = "🧠 You're in the BOONIES";
-            }
-  
-            const anchor = driveTimes[0];
-            const anchorName = anchor.place.name;
-            const anchorVicinity = anchor.place.vicinity;
-            const driveTime = anchor.durationText;
-    
-            resultsDiv.innerHTML += `
-                <div class="map-drive">
-                <p>🚘 <strong>${driveTime}</strong> drive to <em>${anchorName}</em> (${anchorVicinity})</p>
-                <p>🏙️ Closest anchor: ${anchorType === "any" ? "Any" : anchorType.replaceAll('_', ' ')}</p>
-                <p>${cityStatus}</p>
-                </div>
-            `;
-
-            // After displaying results (like resultsDiv.innerHTML += ...)
-
-            const mapDiv = document.getElementById("map");
-            mapDiv.style.display = "block"; // show the map
-
-            const map = new google.maps.Map(mapDiv, {
-            center: originLatLng,
-            zoom: 10,
-            });
-
-            const directionsService = new google.maps.DirectionsService();
-            const directionsRenderer = new google.maps.DirectionsRenderer({
-            map: map,
-            suppressMarkers: false, // or true if you want custom pins
-            });
-
-            directionsService.route(
-            {
-                origin: originLatLng,
-                destination: anchor.place.geometry.location,
-                travelMode: google.maps.TravelMode.DRIVING,
-            },
-            (result, status) => {
-                if (status === "OK") {
-                directionsRenderer.setDirections(result);
-                } else {
-                console.warn("🚫 Failed to draw route:", status);
-                }
-            }
-            );
-
-            setTimeout(() => {
-                resultsDiv.scrollIntoView({ behavior: 'smooth' });
-            }, 200);
+    const distanceService = new google.maps.DistanceMatrixService();
+    distanceService.getDistanceMatrix(
+      {
+        origins: [originLatLng],
+        destinations: destinations,
+        travelMode: google.maps.TravelMode.DRIVING,
+      },
+      (response, status) => {
+        if (status !== "OK") {
+          resultsDiv.innerHTML += `<p>🚫 Failed to get drive times.</p>`;
+          return;
         }
-      );
-    });
+  
+        const elements = response.rows[0].elements;
+        const driveTimes = elements.map((e, i) => ({
+          minutes: e.status === "OK" ? e.duration.value / 60 : Infinity,
+          durationText: e.status === "OK" ? e.duration.text : "n/a",
+          place: topPlaces[i],
+          index: i,
+        }));
+  
+        driveTimes.sort((a, b) => a.minutes - b.minutes);
+        const validResults = driveTimes.filter((e) => e.minutes < Infinity);
+        const closest = driveTimes[0];
+  
+        let cityStatus = "";
+        if (closest.minutes <= 7 && validResults.length >= 5) {
+          cityStatus = "🧠 Looks like you're IN a city";
+        } else if (closest.minutes <= 13 && validResults.length >= 3) {
+          cityStatus = "🧠 You're NEAR a city";
+        } else if (closest.minutes <= 29 && validResults.length >= 3) {
+          cityStatus = "🧠 We're looking at the outskirts";
+        } else {
+          cityStatus = "🧠 You're in the BOONIES";
+        }
+  
+        const anchor = driveTimes[0];
+        const anchorName = anchor.place.displayName?.text || anchor.place.name || "Unknown";
+        const anchorVicinity = anchor.place.formattedAddress || "unknown";
+        const driveTime = anchor.durationText;
+  
+        resultsDiv.innerHTML += `
+          <div class="map-drive">
+            <p>🚘 <strong>${driveTime}</strong> drive to <em>${anchorName}</em> (${anchorVicinity})</p>
+            <p>🏙️ Closest anchor: ${anchorType === "any" ? "Any" : anchorType.replaceAll('_', ' ')}</p>
+            <p>${cityStatus}</p>
+          </div>
+        `;
+  
+        const mapDiv = document.getElementById("map");
+        mapDiv.style.display = "block";
+  
+        const map = new google.maps.Map(mapDiv, {
+          center: originLatLng,
+          zoom: 10,
+        });
+  
+        const directionsService = new google.maps.DirectionsService();
+        const directionsRenderer = new google.maps.DirectionsRenderer({
+          map: map,
+          suppressMarkers: false,
+        });
+  
+        directionsService.route(
+          {
+            origin: originLatLng,
+            destination: anchor.place.location,
+            travelMode: google.maps.TravelMode.DRIVING,
+          },
+          (result, status) => {
+            if (status === "OK") {
+              directionsRenderer.setDirections(result);
+            } else {
+              console.warn("🚫 Failed to draw route:", status);
+            }
+          }
+        );
+  
+        setTimeout(() => {
+          resultsDiv.scrollIntoView({ behavior: "smooth" });
+        }, 200);
+      }
+    );
   }
+    
