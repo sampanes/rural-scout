@@ -1,7 +1,8 @@
 #!/bin/bash
+echo "🧼 Reverting injected dev API key back to placeholder..."
 
-echo "🧼 Reverting any Google API key back to __API_KEY__..."
+# Replace the full Google Maps script URL with the placeholder
+find . -type f \( -name "*.js" -o -name "*.html" \) \
+  -exec sed -i "s|https://maps.googleapis.com/maps/api/js?key=[^&\"']\+&libraries=places,core|%%MAPS_SCRIPT_URL%%|g" {} +
 
-find . -type f \( -name "*.js" -o -name "*.html" \) -exec sed -i "s|AIza[[:alnum:]_-]\{35,\}|__API_KEY__|g" {} +
-
-echo "✅ Reverted dev key. Safe to commit."
+echo "✅ Dev key reverted. Safe to commit."
