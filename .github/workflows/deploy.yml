@@ -16,11 +16,14 @@ jobs:
       - name: 🔍 Echo raw placeholder
         run: grep '__API_KEY__' index.html || echo "✅ Placeholder not found in index.html"
 
-      - name: 🔧 Inject full Maps script URL
+      - name: 🔧 Inject API key with Perl
+        env:
+          MAPS_SCRIPT_URL: https://maps.googleapis.com/maps/api/js?key=${{ secrets.GOOGLE_MAPS_API_KEY }}&libraries=places
         run: |
-          echo "Injecting key..."
+          echo "Replacing placeholder with API URL (Perl style)"
           find . -type f \( -name '*.html' -o -name '*.js' \) \
-            -exec sed -i "s|__API_KEY__|https://maps.googleapis.com/maps/api/js?key=${{ secrets.GOOGLE_MAPS_API_KEY }}&libraries=places|g" {} +
+            -exec perl -pi -e 's|%%MAPS_SCRIPT_URL%%|$ENV{MAPS_SCRIPT_URL}|' {} +
+
 
       - name: 🕵️ Show injected script line
         run: grep 'maps.googleapis.com/maps/api/js' index.html
