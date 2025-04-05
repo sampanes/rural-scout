@@ -6,6 +6,63 @@ const cityHeuristics = [
   { maxMinutes: Infinity, minResults: 0, status: "🧠 You're in the BOONIES" },
 ];
 
+let axolotlData = {};
+
+async function loadAxolotlRules() {
+  try {
+    const res = await fetch("https://script.google.com/macros/s/AKfycby0-PiqADl27Q1cfwSMc1gq4s6yhgBtlPd-RlLXRn2XZWbUSoXMEnIn-zydqCfquaEYkA/exec?view=axolotls");
+    const data = await res.json();
+
+    // Build a lookup object: { "Arizona": { G2G: true, Note: "" }, ... }
+    axolotlData = Object.fromEntries(
+      data.map(entry => [entry.State, {
+        G2G: entry.G2G === true || entry.G2G === "TRUE",  // handles typed + string boolean
+        Note: entry.Note || ""
+      }])
+    );
+
+    console.log("Axolotl rules loaded:", axolotlData);
+  } catch (err) {
+    console.error("Failed to load Axolotl rules:", err);
+  }
+}
+
+function checkAxolotlStatus(stateName) {
+  if (!axolotlData || Object.keys(axolotlData).length === 0) {
+    console.warn("Axolotl data not loaded yet — skipping check.");
+    return;
+  }
+
+  const stateInfo = axolotlData[stateName];
+
+  if (!stateInfo) {
+    console.warn("No axolotl info for state:", stateName);
+    return;
+  }
+
+  if (stateInfo.G2G === true) {
+    console.log(`✅ ${stateName} is axolotl-friendly!`);
+    return;
+  }
+
+  // If G2G is false or missing
+  alert(`⚠️ Axolotl warning for ${stateName}. ${stateInfo.Note || "(no info)"}`);
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  loadAxolotlRules();
+});
+
+function getStateFromPlace(place) {
+  if (!place || !place.address_components) return null;
+
+  const stateComponent = place.address_components.find(comp =>
+    comp.types.includes("administrative_area_level_1")
+  );
+
+  return stateComponent ? stateComponent.long_name : null;
+}
+
 function extractAddress(text) {
   if (text.includes('zillow.com')) {
     const match = text.match(/\/([0-9a-zA-Z\-]+)-([a-zA-Z\-]+)-([a-zA-Z]{2})-(\d{5})/);
@@ -32,6 +89,8 @@ async function lookup() {
   try {
     const place = await getGeocodedPlace(cleaned);
     const elevation = await getElevation(place.geometry.location);
+
+    checkAxolotlStatus(getStateFromPlace(place));
 
     renderInitialResults(place, elevation, resultsDiv);
     showFavoriteButton(place, elevation);
