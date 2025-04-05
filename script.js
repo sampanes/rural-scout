@@ -95,11 +95,11 @@ function findNearestAnchor(originLatLng, resultsDiv) {
             const closest = driveTimes[0];
 
             let cityStatus = '';
-            if (closest.minutes <= 5 && validResults.length >= 5) {
+            if (closest.minutes <= 7 && validResults.length >= 5) {
                 cityStatus = "🧠 Looks like you're IN a city";
-            } else if (closest.minutes <= 10 && validResults.length >= 3) {
+            } else if (closest.minutes <= 13 && validResults.length >= 3) {
                 cityStatus = "🧠 You're NEAR a city";
-            } else if (closest.minutes <= 25 && validResults.length >= 3) {
+            } else if (closest.minutes <= 29 && validResults.length >= 3) {
                 cityStatus = "🧠 We're looking at the outskirts";    
             } else {
                 cityStatus = "🧠 You're in the BOONIES";
