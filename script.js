@@ -11,7 +11,7 @@ function extractAddress(text) {
 }
 
 function lookup() {
-    document.getElementById('loading').style.display = 'block';
+    document.getElementById('loading').classList.add('visible');
     const rawInput = document.getElementById('input').value;
     const cleaned = extractAddress(rawInput);
     const resultsDiv = document.getElementById('results');
@@ -37,7 +37,7 @@ function lookup() {
         <a class="map-link" href="https://www.google.com/maps/search/hospitals+near+${lat},${lng}" target="_blank">🏥 Hospitals Nearby</a>
         `;
 
-        document.getElementById('loading').style.display = 'none';
+        document.getElementById('loading').classList.remove('visible');
         findNearestAnchor(location, resultsDiv);
     });
 }
@@ -125,4 +125,3 @@ function findNearestAnchor(originLatLng, resultsDiv) {
       );
     });
   }
-  
