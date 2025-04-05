@@ -23,11 +23,19 @@ async function lookup() {
   const resultsDiv = document.getElementById('results');
   resultsDiv.innerHTML = `<p>Looking up: <strong>${cleaned}</strong>...</p>`;
 
+  if (typeof google === 'undefined' || !google.maps) {
+    resultsDiv.innerHTML = `<p>⚠️ Google Maps API not loaded. Did you forget to fill the API key?</p>`;
+    document.getElementById('loading').classList.remove('visible');
+    return;
+  }
+
   try {
     const place = await getGeocodedPlace(cleaned);
-    renderInitialResults(place, resultsDiv);
-    showFavoriteButton(place);
-    await findNearestAnchor(place.geometry.location, resultsDiv);
+    const elevation = await getElevation(place.geometry.location);
+
+    renderInitialResults(place, elevation, resultsDiv);
+    showFavoriteButton(place, elevation);
+    await findNearestAnchor(place.geometry.location, elevation, resultsDiv);
   } catch (err) {
     resultsDiv.innerHTML = `<p>${err}</p>`;
   } finally {
@@ -48,7 +56,7 @@ function getGeocodedPlace(address) {
   });
 }
   
-function renderInitialResults(place, resultsDiv) {
+function renderInitialResults(place, elevation, resultsDiv) {
   const location = place.geometry.location;
   const lat = location.lat();
   const lng = location.lng();
@@ -62,13 +70,14 @@ function renderInitialResults(place, resultsDiv) {
 
   resultsDiv.innerHTML = `
     <p>📍 <strong>${fullAddr}</strong></p>
+    <p>🗻 Elevation: ${elevation ? elevation + " meters" : "N/A"}</p>
     <a class="map-link" href="https://www.google.com/maps/place/${lat},${lng}" target="_blank">📌 View on Google Maps</a>
     <a class="map-link" href="https://www.google.com/maps/search/${encodeURIComponent(typeName)}+near+${lat},${lng}" target="_blank">🔎 Nearby ${typeName}</a>
-    <a class="map-link" href="https://www.google.com/maps/search/${fallbackType}+near+${lat},${lng}" target="_blank">🔎 Nearby ${fallbackType}</a>
+    <a class="map-link" href="https://www.google.com/maps/search/${fallbackType}+near+${lat},${lng}" target="_blank">🔁 Also check ${fallbackType}</a>
   `;
 }
 
-function showFavoriteButton(place) {
+function showFavoriteButton(place, elevation) {
   let container = document.getElementById("favorite-container");
   if (!container) {
     container = document.createElement("div");
@@ -96,7 +105,7 @@ function showFavoriteButton(place) {
       Address: addr,
       City: city,
       State: state,
-      Elevation: "",    // placeholder
+      Elevation: elevation != null ? `${elevation} m` : "",  // Now includes elevation
       Zestimate: "",
       Zacreage: ""
     };
@@ -185,7 +194,6 @@ async function findNearestAnchor(originLatLng, resultsDiv) {
     );
   });
 }
-  
   
 function renderMap(originLatLng, destinationLatLng) {
   const mapDiv = document.getElementById("map");
