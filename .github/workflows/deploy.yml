@@ -1,4 +1,4 @@
-name: Build & Deploy
+name: Build & Deploy (with Debug)
 
 on:
   push:
@@ -8,19 +8,33 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: 📥 Checkout repo
         uses: actions/checkout@v3
-      - name: 🔧 Inject API key into JS and HTML
+
+      - name: 🔍 Echo raw placeholder
+        run: grep '__API_KEY__' index.html || echo "✅ Placeholder not found in index.html"
+
+      - name: 🔧 Inject API key into HTML/JS files
         run: |
+          echo "KEY BEING USED: ${{ secrets.GOOGLE_MAPS_API_KEY }}"
           find . -type f \( -name '*.js' -o -name '*.html' \) -exec sed -i "s|__API_KEY__|${{ secrets.GOOGLE_MAPS_API_KEY }}|g" {} +
-      - name: 🚨 Confirm key placeholder is gone
-        run: grep '__API_KEY__' index.html && echo "❌ Still found __API_KEY__" || echo "✅ No placeholder left"
-      - name: 🔍 Print injected <script> tag
-        run: grep 'maps.googleapis.com/maps/api/js' index.html || echo "Not found"
+          echo "✅ Injection command complete"
+
+      - name: 🕵️ Check for leftover placeholders
+        run: |
+          grep '__API_KEY__' index.html && echo "❌ Placeholder still in index.html" && exit 1 || echo "✅ No placeholder found"
+
+      - name: 📄 Confirm API key in script tag
+        run: grep 'maps.googleapis.com/maps/api/js' index.html || echo "❌ Script tag not found"
+
+      - name: 🔬 Print first few lines of script.js
+        run: head -n 10 script.js
 
       - name: 🚀 Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: . # adjust if you're using a subfolder
+          publish_dir: .
+          
