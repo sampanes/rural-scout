@@ -7,174 +7,226 @@ const cityHeuristics = [
 ];
 
 function extractAddress(text) {
-    if (text.includes('zillow.com')) {
-      const match = text.match(/\/([0-9a-zA-Z\-]+)-([a-zA-Z\-]+)-([a-zA-Z]{2})-(\d{5})/);
-      if (match) {
-        return match.slice(1).join(' ').replace(/-/g, ' ');
+  if (text.includes('zillow.com')) {
+    const match = text.match(/\/([0-9a-zA-Z\-]+)-([a-zA-Z\-]+)-([a-zA-Z]{2})-(\d{5})/);
+    if (match) {
+      return match.slice(1).join(' ').replace(/-/g, ' ');
+    }
+  }
+  return text.trim();
+}
+  
+async function lookup() {
+  document.getElementById('loading').classList.add('visible');
+  const rawInput = document.getElementById('input').value;
+  const cleaned = extractAddress(rawInput);
+  const resultsDiv = document.getElementById('results');
+  resultsDiv.innerHTML = `<p>Looking up: <strong>${cleaned}</strong>...</p>`;
+
+  try {
+    const place = await getGeocodedPlace(cleaned);
+    renderInitialResults(place, resultsDiv);
+    showFavoriteButton(place);
+    await findNearestAnchor(place.geometry.location, resultsDiv);
+  } catch (err) {
+    resultsDiv.innerHTML = `<p>${err}</p>`;
+  } finally {
+    document.getElementById('loading').classList.remove('visible');
+  }
+}
+  
+function getGeocodedPlace(address) {
+  return new Promise((resolve, reject) => {
+    const geocoder = new google.maps.Geocoder();
+    geocoder.geocode({ address }, (results, status) => {
+      if (status !== 'OK' || !results.length) {
+        reject('❌ Could not find location.');
+      } else {
+        resolve(results[0]);
       }
-    }
-    return text.trim();
-  }
-  
-  async function lookup() {
-    document.getElementById('loading').classList.add('visible');
-    const rawInput = document.getElementById('input').value;
-    const cleaned = extractAddress(rawInput);
-    const resultsDiv = document.getElementById('results');
-    resultsDiv.innerHTML = `<p>Looking up: <strong>${cleaned}</strong>...</p>`;
-  
-    try {
-      const place = await getGeocodedPlace(cleaned);
-      renderInitialResults(place, resultsDiv);
-      await findNearestAnchor(place.geometry.location, resultsDiv);
-    } catch (err) {
-      resultsDiv.innerHTML = `<p>${err}</p>`;
-    } finally {
-      document.getElementById('loading').classList.remove('visible');
-    }
-  }
-  
-  function getGeocodedPlace(address) {
-    return new Promise((resolve, reject) => {
-      const geocoder = new google.maps.Geocoder();
-      geocoder.geocode({ address }, (results, status) => {
-        if (status !== 'OK' || !results.length) {
-          reject('❌ Could not find location.');
-        } else {
-          resolve(results[0]);
-        }
-      });
     });
-  }
+  });
+}
   
-  function renderInitialResults(place, resultsDiv) {
-    const location = place.geometry.location;
-    const lat = location.lat();
-    const lng = location.lng();
-    const fullAddr = place.formatted_address;
-  
-    const anchorType = document.getElementById("anchorType").value;
-    const typeName = anchorType === "any" ? "points of interest" : anchorType.replaceAll('_', ' ');
+function renderInitialResults(place, resultsDiv) {
+  const location = place.geometry.location;
+  const lat = location.lat();
+  const lng = location.lng();
+  const fullAddr = place.formatted_address;
 
-    // Decide fallback
-    const fallbackType = anchorType === "hospital" ? "schools" : "hospitals";
+  const anchorType = document.getElementById("anchorType").value;
+  const typeName = anchorType === "any" ? "points of interest" : anchorType.replaceAll('_', ' ');
 
-    resultsDiv.innerHTML = `
-      <p>📍 <strong>${fullAddr}</strong></p>
-      <a class="map-link" href="https://www.google.com/maps/place/${lat},${lng}" target="_blank">📌 View on Google Maps</a>
-      <a class="map-link" href="https://www.google.com/maps/search/${encodeURIComponent(typeName)}+near+${lat},${lng}" target="_blank">🔎 Nearby ${typeName}</a>
-      <a class="map-link" href="https://www.google.com/maps/search/${fallbackType}+near+${lat},${lng}" target="_blank">🔎 Nearby ${fallbackType}</a>
-    `;
+  // Decide fallback
+  const fallbackType = anchorType === "hospital" ? "schools" : "hospitals";
+
+  resultsDiv.innerHTML = `
+    <p>📍 <strong>${fullAddr}</strong></p>
+    <a class="map-link" href="https://www.google.com/maps/place/${lat},${lng}" target="_blank">📌 View on Google Maps</a>
+    <a class="map-link" href="https://www.google.com/maps/search/${encodeURIComponent(typeName)}+near+${lat},${lng}" target="_blank">🔎 Nearby ${typeName}</a>
+    <a class="map-link" href="https://www.google.com/maps/search/${fallbackType}+near+${lat},${lng}" target="_blank">🔎 Nearby ${fallbackType}</a>
+  `;
+}
+
+function showFavoriteButton(place) {
+  let container = document.getElementById("favorite-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "favorite-container";
+    document.getElementById("results").appendChild(container);
   }
-  
-  async function findNearestAnchor(originLatLng, resultsDiv) {
-    const anchorType = document.getElementById("anchorType").value;
-  
-    const map = new google.maps.Map(document.createElement("div"));
-    const service = new google.maps.places.PlacesService(map);
-  
-    const request = {
-      location: originLatLng,
-      radius: 50000,
+
+  container.innerHTML = ""; // Clear old button
+
+  const btn = document.createElement("button");
+  btn.textContent = "💖 Add to Favorites";
+  btn.style.margin = "1rem 0";
+  btn.onclick = () => {
+    const addr = place.formatted_address || "";
+    const components = place.address_components || [];
+
+    const getComponent = (type) =>
+      components.find((c) => c.types.includes(type))?.long_name || "";
+
+    const city = getComponent("locality") || getComponent("sublocality") || getComponent("administrative_area_level_2");
+    const state = getComponent("administrative_area_level_1");
+
+    const data = {
+      Name: place.name || "(unnamed)",
+      Address: addr,
+      City: city,
+      State: state,
+      Elevation: "",    // placeholder
+      Zestimate: "",
+      Zacreage: ""
     };
-    if (anchorType !== "any") {
-      request.type = anchorType;
-    }
-  
-    service.nearbySearch(request, (places, status) => {
-      if (status !== "OK" || !places.length) {
-        resultsDiv.innerHTML += `<p>🚫 No nearby place found.</p>`;
-        return;
-      }
-  
-      const topPlaces = places.slice(0, 5);
-      const destinations = topPlaces.map((p) => p.geometry.location);
-  
-      const distanceService = new google.maps.DistanceMatrixService();
-      distanceService.getDistanceMatrix(
-        {
-          origins: [originLatLng],
-          destinations,
-          travelMode: google.maps.TravelMode.DRIVING,
-        },
-        (response, status) => {
-          if (status !== "OK") {
-            resultsDiv.innerHTML += `<p>🚫 Failed to get drive times.</p>`;
-            return;
-          }
-  
-          const elements = response.rows[0].elements;
-          const driveTimes = elements.map((e, i) => ({
-            minutes: e.status === "OK" ? e.duration.value / 60 : Infinity,
-            durationText: e.status === "OK" ? e.duration.text : "n/a",
-            place: topPlaces[i],
-            index: i,
-          }));
-  
-          driveTimes.sort((a, b) => a.minutes - b.minutes);
-          const validResults = driveTimes.filter((e) => e.minutes < Infinity);
-          const closest = driveTimes[0];
-  
-          let cityStatus = "🧠 Status unknown";
-          for (const rule of cityHeuristics) {
-            if (closest.minutes <= rule.maxMinutes && validResults.length >= rule.minResults) {
-              cityStatus = rule.status;
-              break;
-            }
-          }
-  
-          const anchor = driveTimes[0];
-          const anchorName = anchor.place.name || "Unknown";
-          const anchorVicinity = anchor.place.vicinity || "unknown";
-          const driveTime = anchor.durationText;
-  
-          resultsDiv.innerHTML += `
-            <div class="map-drive">
-              <p>🚘 <strong>${driveTime}</strong> drive to <em>${anchorName}</em> (${anchorVicinity})</p>
-              <p>🏙️ Closest anchor: ${anchorType === "any" ? "Any" : anchorType.replaceAll('_', ' ')}</p>
-              <p>${cityStatus}</p>
-            </div>
-          `;
-  
-          renderMap(originLatLng, anchor.place.geometry.location);
-  
-          setTimeout(() => {
-            resultsDiv.scrollIntoView({ behavior: "smooth" });
-          }, 200);
-        }
-      );
-    });
+
+    alert(`(TODO) Submit this data to Google Sheet:\n${JSON.stringify(data, null, 2)}`);
+  };
+
+  container.appendChild(btn);
+}
+
+async function findNearestAnchor(originLatLng, resultsDiv) {
+  const anchorType = document.getElementById("anchorType").value;
+
+  const map = new google.maps.Map(document.createElement("div"));
+  const service = new google.maps.places.PlacesService(map);
+
+  const request = {
+    location: originLatLng,
+    radius: 50000,
+  };
+  if (anchorType !== "any") {
+    request.type = anchorType;
   }
-  
-  
-  function renderMap(originLatLng, destinationLatLng) {
-    const mapDiv = document.getElementById("map");
-    mapDiv.style.display = "block";
-  
-    const map = new google.maps.Map(mapDiv, {
-      center: originLatLng,
-      zoom: 10,
-    });
-  
-    const directionsService = new google.maps.DirectionsService();
-    const directionsRenderer = new google.maps.DirectionsRenderer({
-      map: map,
-      suppressMarkers: false,
-    });
-  
-    directionsService.route(
+
+  service.nearbySearch(request, (places, status) => {
+    if (status !== "OK" || !places.length) {
+      resultsDiv.innerHTML += `<p>🚫 No nearby place found.</p>`;
+      return;
+    }
+
+    const topPlaces = places.slice(0, 5);
+    const destinations = topPlaces.map((p) => p.geometry.location);
+
+    const distanceService = new google.maps.DistanceMatrixService();
+    distanceService.getDistanceMatrix(
       {
-        origin: originLatLng,
-        destination: destinationLatLng,
+        origins: [originLatLng],
+        destinations,
         travelMode: google.maps.TravelMode.DRIVING,
       },
-      (result, status) => {
-        if (status === "OK") {
-          directionsRenderer.setDirections(result);
-        } else {
-          console.warn("🚫 Failed to draw route:", status);
+      (response, status) => {
+        if (status !== "OK") {
+          resultsDiv.innerHTML += `<p>🚫 Failed to get drive times.</p>`;
+          return;
         }
+
+        const elements = response.rows[0].elements;
+        const driveTimes = elements.map((e, i) => ({
+          minutes: e.status === "OK" ? e.duration.value / 60 : Infinity,
+          durationText: e.status === "OK" ? e.duration.text : "n/a",
+          place: topPlaces[i],
+          index: i,
+        }));
+
+        driveTimes.sort((a, b) => a.minutes - b.minutes);
+        const validResults = driveTimes.filter((e) => e.minutes < Infinity);
+        const closest = driveTimes[0];
+
+        let cityStatus = "🧠 Status unknown";
+        for (const rule of cityHeuristics) {
+          if (closest.minutes <= rule.maxMinutes && validResults.length >= rule.minResults) {
+            cityStatus = rule.status;
+            break;
+          }
+        }
+
+        const anchor = driveTimes[0];
+        const anchorName = anchor.place.name || "Unknown";
+        const anchorVicinity = anchor.place.vicinity || "unknown";
+        const driveTime = anchor.durationText;
+
+        resultsDiv.innerHTML += `
+          <div class="map-drive">
+            <p>🚘 <strong>${driveTime}</strong> drive to <em>${anchorName}</em> (${anchorVicinity})</p>
+            <p>🏙️ Closest anchor: ${anchorType === "any" ? "Any" : anchorType.replaceAll('_', ' ')}</p>
+            <p>${cityStatus}</p>
+          </div>
+        `;
+
+        renderMap(originLatLng, anchor.place.geometry.location);
+
+        setTimeout(() => {
+          resultsDiv.scrollIntoView({ behavior: "smooth" });
+        }, 200);
       }
     );
-  }
+  });
+}
   
+  
+function renderMap(originLatLng, destinationLatLng) {
+  const mapDiv = document.getElementById("map");
+  mapDiv.style.display = "block";
+
+  const map = new google.maps.Map(mapDiv, {
+    center: originLatLng,
+    zoom: 10,
+  });
+
+  const directionsService = new google.maps.DirectionsService();
+  const directionsRenderer = new google.maps.DirectionsRenderer({
+    map: map,
+    suppressMarkers: false,
+  });
+
+  directionsService.route(
+    {
+      origin: originLatLng,
+      destination: destinationLatLng,
+      travelMode: google.maps.TravelMode.DRIVING,
+    },
+    (result, status) => {
+      if (status === "OK") {
+        directionsRenderer.setDirections(result);
+      } else {
+        console.warn("🚫 Failed to draw route:", status);
+      }
+    }
+  );
+}
+  
+function getElevation(latlng) {
+  return new Promise((resolve, reject) => {
+    const elevator = new google.maps.ElevationService();
+    elevator.getElevationForLocations({ locations: [latlng] }, (results, status) => {
+      if (status === "OK" && results.length) {
+        resolve(Math.round(results[0].elevation)); // in meters
+      } else {
+        resolve(null); // Gracefully handle failure
+      }
+    });
+  });
+}
