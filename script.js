@@ -80,10 +80,10 @@ function findNearestAnchor(originLatLng, resultsDiv) {
 
             const elements = response.rows[0].elements;
             const driveTimes = elements.map((e, i) => ({
-            minutes: e.status === 'OK' ? e.duration.value / 60 : Infinity,
-            durationText: e.status === 'OK' ? e.duration.text : 'n/a',
-            place: topPlaces[i],
-            index: i,
+                minutes: e.status === 'OK' ? e.duration.value / 60 : Infinity,
+                durationText: e.status === 'OK' ? e.duration.text : 'n/a',
+                place: topPlaces[i],
+                index: i,
             }));
 
             // Sort by time, just to be sure
@@ -95,12 +95,14 @@ function findNearestAnchor(originLatLng, resultsDiv) {
             const closest = driveTimes[0];
 
             let cityStatus = '';
-            if (closest.minutes <= 5 && validResults.length >= 3) {
-            cityStatus = "🧠 Looks like you're IN a city";
-            } else if (closest.minutes <= 10 && validResults.length >= 2) {
-            cityStatus = "🧠 You're NEAR a city";
+            if (closest.minutes <= 5 && validResults.length >= 5) {
+                cityStatus = "🧠 Looks like you're IN a city";
+            } else if (closest.minutes <= 10 && validResults.length >= 3) {
+                cityStatus = "🧠 You're NEAR a city";
+            } else if (closest.minutes <= 25 && validResults.length >= 3) {
+                cityStatus = "🧠 We're looking at the outskirts";    
             } else {
-            cityStatus = "🧠 You're in the BOONIES";
+                cityStatus = "🧠 You're in the BOONIES";
             }
   
             const anchor = driveTimes[0];
