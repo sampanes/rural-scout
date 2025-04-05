@@ -14,23 +14,22 @@ jobs:
         uses: actions/checkout@v3
 
       - name: 🔍 Echo raw placeholder
-        run: grep '__API_KEY__' index.html || echo "✅ Placeholder not found in index.html"
+        run: grep '%%MAPS_SCRIPT_URL%%' index.html || echo "✅ Placeholder not found in index.html"
 
-      - name: 🔧 Inject API key with Perl
+      - name: 🔧 Inject full Maps script URL (Perl style)
         env:
           MAPS_SCRIPT_URL: https://maps.googleapis.com/maps/api/js?key=${{ secrets.GOOGLE_MAPS_API_KEY }}&libraries=places
         run: |
-          echo "Replacing placeholder with API URL (Perl style)"
+          echo "Injecting key..."
           find . -type f \( -name '*.html' -o -name '*.js' \) \
             -exec perl -pi -e 's|%%MAPS_SCRIPT_URL%%|$ENV{MAPS_SCRIPT_URL}|' {} +
-
 
       - name: 🕵️ Show injected script line
         run: grep 'maps.googleapis.com/maps/api/js' index.html
 
       - name: 🕵️ Check for leftover placeholders
         run: |
-          grep '__API_KEY__' index.html && echo "❌ Placeholder still in index.html" && exit 1 || echo "✅ No placeholder found"
+          grep '%%MAPS_SCRIPT_URL%%' index.html && echo "❌ Placeholder still in index.html" && exit 1 || echo "✅ No placeholder found"
 
       - name: 📄 Confirm API key in script tag
         run: grep 'maps.googleapis.com/maps/api/js' index.html || echo "❌ Script tag not found"
@@ -43,4 +42,3 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
-          
