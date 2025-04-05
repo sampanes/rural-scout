@@ -1,3 +1,11 @@
+const cityHeuristics = [
+  { maxMinutes: 9, minResults: 5, status: "🧠 Looks like you're IN a city" },
+  { maxMinutes: 23, minResults: 5, status: "🧠 You're NEAR a city" },
+  { maxMinutes: 39, minResults: 4, status: "🧠 Close to civilization" },
+  { maxMinutes: 39, minResults: 2, status: "🧠 Outskirts of civilization" },
+  { maxMinutes: Infinity, minResults: 0, status: "🧠 You're in the BOONIES" },
+];
+
 function extractAddress(text) {
     if (text.includes('zillow.com')) {
       const match = text.match(/\/([0-9a-zA-Z\-]+)-([a-zA-Z\-]+)-([a-zA-Z]{2})-(\d{5})/);
@@ -45,11 +53,17 @@ function extractAddress(text) {
     const lng = location.lng();
     const fullAddr = place.formatted_address;
   
+    const anchorType = document.getElementById("anchorType").value;
+    const typeName = anchorType === "any" ? "points of interest" : anchorType.replaceAll('_', ' ');
+
+    // Decide fallback
+    const fallbackType = anchorType === "hospital" ? "schools" : "hospitals";
+
     resultsDiv.innerHTML = `
       <p>📍 <strong>${fullAddr}</strong></p>
       <a class="map-link" href="https://www.google.com/maps/place/${lat},${lng}" target="_blank">📌 View on Google Maps</a>
-      <a class="map-link" href="https://www.google.com/maps/search/schools+near+${lat},${lng}" target="_blank">🏫 Schools Nearby</a>
-      <a class="map-link" href="https://www.google.com/maps/search/hospitals+near+${lat},${lng}" target="_blank">🏥 Hospitals Nearby</a>
+      <a class="map-link" href="https://www.google.com/maps/search/${encodeURIComponent(typeName)}+near+${lat},${lng}" target="_blank">🔎 Nearby ${typeName}</a>
+      <a class="map-link" href="https://www.google.com/maps/search/${fallbackType}+near+${lat},${lng}" target="_blank">🔎 Nearby ${fallbackType}</a>
     `;
   }
   
@@ -101,15 +115,12 @@ function extractAddress(text) {
           const validResults = driveTimes.filter((e) => e.minutes < Infinity);
           const closest = driveTimes[0];
   
-          let cityStatus = "";
-          if (closest.minutes <= 7 && validResults.length >= 5) {
-            cityStatus = "🧠 Looks like you're IN a city";
-          } else if (closest.minutes <= 13 && validResults.length >= 3) {
-            cityStatus = "🧠 You're NEAR a city";
-          } else if (closest.minutes <= 29 && validResults.length >= 3) {
-            cityStatus = "🧠 We're looking at the outskirts";
-          } else {
-            cityStatus = "🧠 You're in the BOONIES";
+          let cityStatus = "🧠 Status unknown";
+          for (const rule of cityHeuristics) {
+            if (closest.minutes <= rule.maxMinutes && validResults.length >= rule.minResults) {
+              cityStatus = rule.status;
+              break;
+            }
           }
   
           const anchor = driveTimes[0];
