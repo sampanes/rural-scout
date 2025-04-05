@@ -93,6 +93,7 @@ function showFavoriteButton(place, elevation) {
   btn.onclick = () => {
     const addr = place.formatted_address || "";
     const components = place.address_components || [];
+    const location = place.geometry.location;
 
     const getComponent = (type) =>
       components.find((c) => c.types.includes(type))?.long_name || "";
@@ -106,11 +107,38 @@ function showFavoriteButton(place, elevation) {
       City: city,
       State: state,
       Elevation: elevation != null ? `${elevation} ft` : "",
+      Lat: location.lat(),
+      Lon: location.lng(),
       Zestimate: "",
       Zacreage: ""
     };
 
-    alert(`(TODO) Submit this data to Google Sheet:\n${JSON.stringify(data, null, 2)}`);
+    fetch('https://script.google.com/macros/s/AKfycby0-PiqADl27Q1cfwSMc1gq4s6yhgBtlPd-RlLXRn2XZWbUSoXMEnIn-zydqCfquaEYkA/exec', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: data.Name,
+        address: data.Address,
+        city: data.City,
+        state: data.State,
+        elevation: data.Elevation,
+        lat: data.Lat,
+        lon: data.Lon,
+        zestimate: data.Zestimate,
+        zacreage: data.Zacreage
+      })
+    })
+      .then(response => response.json())
+      .then(result => {
+        alert("✅ Favorite saved!");
+      })
+      .catch(err => {
+        console.error("❌ Failed to submit:", err);
+        alert("❌ Failed to save favorite.");
+      });
+
   };
 
   container.appendChild(btn);
