@@ -62,3 +62,8 @@ If your API key is restricted to `https://sampanes.github.io/*`, make sure your 
 Crafted with sweat and joy by [@sampanes](https://github.com/sampanes),  
 with help from the internet and the crushing weight of Zillow-fueled fantasies.
 
+before commits/push:
+./revert-local-key.sh 
+
+before running locally
+./fill-local-key.sh
