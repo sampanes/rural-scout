@@ -53,12 +53,19 @@ function getGeocodedPlace(address) {
         const place = results[0];
         const components = place.address_components || [];
 
-        const hasStreet = components.some(c =>
-          c.types.includes("street_number") || c.types.includes("route")
-        );
+        const hasStreetNumber = components.some(c => c.types.includes("street_number"));
+        const hasRoute = components.some(c => c.types.includes("route"));
 
-        if (!hasStreet) {
-          alert("⚠️ Warning: this address might be missing a street number or street name.");
+        if (!hasStreetNumber || !hasRoute) {
+          let msg = "⚠️ Address may be incomplete:";
+          if (!hasStreetNumber && !hasRoute) {
+            msg += " missing street number *and* street name.";
+          } else if (!hasStreetNumber) {
+            msg += " missing street number.";
+          } else {
+            msg += " missing street name.";
+          }
+          alert(msg);
         }
 
         resolve(place);
