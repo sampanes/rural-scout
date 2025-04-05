@@ -117,7 +117,38 @@ function findNearestAnchor(originLatLng, resultsDiv) {
                 <p>${cityStatus}</p>
                 </div>
             `;
-    
+
+            // After displaying results (like resultsDiv.innerHTML += ...)
+
+            const mapDiv = document.getElementById("map");
+            mapDiv.style.display = "block"; // show the map
+
+            const map = new google.maps.Map(mapDiv, {
+            center: originLatLng,
+            zoom: 10,
+            });
+
+            const directionsService = new google.maps.DirectionsService();
+            const directionsRenderer = new google.maps.DirectionsRenderer({
+            map: map,
+            suppressMarkers: false, // or true if you want custom pins
+            });
+
+            directionsService.route(
+            {
+                origin: originLatLng,
+                destination: anchor.place.geometry.location,
+                travelMode: google.maps.TravelMode.DRIVING,
+            },
+            (result, status) => {
+                if (status === "OK") {
+                directionsRenderer.setDirections(result);
+                } else {
+                console.warn("🚫 Failed to draw route:", status);
+                }
+            }
+            );
+
             setTimeout(() => {
                 resultsDiv.scrollIntoView({ behavior: 'smooth' });
             }, 200);
