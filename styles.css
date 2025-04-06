@@ -1,3 +1,10 @@
+/* Make widths behave properly */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 a.map-link {
     display: block;
     text-align: center;
@@ -83,4 +90,34 @@ a.map-link {
     background-position: right 0.7rem center;
     background-size: 1rem;
   }
-  
+
+.main-wrapper {
+  position: relative;
+  max-width: 600px;
+  /* match body */
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+/* Now the button hugs the inside top-right */
+#google-sheets-link {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+}
+
+#google-sheets-link button {
+  padding: 8px 14px;
+  font-size: 14px;
+  background-color: #34a853;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#google-sheets-link button:hover {
+  background-color: #28a745;
+}
