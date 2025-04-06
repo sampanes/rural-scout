@@ -90,7 +90,10 @@ async function lookup() {
   resultsDiv.innerHTML = `<p>Looking up: <strong>${cleaned}</strong>...</p>`;
 
   if (typeof google === 'undefined' || !google.maps) {
-    resultsDiv.innerHTML = `<p>⚠️ Google Maps API not loaded. Did you forget to fill the API key?</p>`;
+    resultsDiv.innerHTML = `
+      <p>⚠️ Couldn't load the map. Please check your internet connection or  get John to check the API key.</p>
+      <p>🗣️ if something breaks, blame John™</p>
+      `;
     document.getElementById('loading').classList.remove('visible');
     return;
   }
@@ -361,3 +364,16 @@ function getElevation(latlng) {
     });
   });
 }
+
+window.addEventListener("DOMContentLoaded", () => {
+  if (typeof google === 'undefined' || !google.maps) {
+    document.getElementById('results').innerHTML = `
+      <p>⚠️ Google Maps API not loaded. Did you forget to ./fill the API key?</p>
+      <p>🗣️ if something breaks, blame John™</p>
+    `;
+    return;
+  }
+
+  // Safe to attach handlers now
+  document.querySelector("button").addEventListener("click", lookup);
+});
