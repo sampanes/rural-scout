@@ -13,17 +13,21 @@ async function loadAxolotlRules() {
     const res = await fetch("https://script.google.com/macros/s/AKfycby0-PiqADl27Q1cfwSMc1gq4s6yhgBtlPd-RlLXRn2XZWbUSoXMEnIn-zydqCfquaEYkA/exec?view=axolotls");
     const data = await res.json();
 
-    // Build a lookup object: { "Arizona": { G2G: true, Note: "" }, ... }
+    console.log("📥 Raw axolotl sheet data:", data);
+
     axolotlData = Object.fromEntries(
-      data.map(entry => [entry.State, {
-        G2G: entry.G2G === true || entry.G2G === "TRUE",  // handles typed + string boolean
-        Note: entry.Note || ""
-      }])
+      data.map(entry => {
+        // console.log(`↪️ Parsing ${entry.State}: G2G =`, entry.G2G, ", Note =", entry.Note);
+        return [entry.State, {
+          G2G: entry.G2G === true || entry.G2G === "TRUE" || entry.G2G === "true" || entry.G2G === 1,
+          Note: entry.Note || ""
+        }];
+      })
     );
 
-    console.log("Axolotl rules loaded:", axolotlData);
+    console.log("✅ Axolotl rules loaded and parsed:", axolotlData);
   } catch (err) {
-    console.error("Failed to load Axolotl rules:", err);
+    console.error("❌ Failed to load Axolotl rules:", err);
   }
 }
 
@@ -95,6 +99,10 @@ async function lookup() {
     const place = await getGeocodedPlace(cleaned);
     const elevation = await getElevation(place.geometry.location);
 
+    if (rawInput.includes("zillow.com")) {
+      place.link = rawInput;
+    }
+
     checkAxolotlStatus(getStateFromPlace(place));
 
     renderInitialResults(place, elevation, resultsDiv);
@@ -130,6 +138,7 @@ function getGeocodedPlace(address) {
             msg += " missing street name.";
           }
           alert(msg);
+          place.comment = msg;
         }
 
         resolve(place);
@@ -184,7 +193,7 @@ function showFavoriteButton(place, elevation) {
     const state = getComponent("administrative_area_level_1");
 
     const data = {
-      Name: place.name || "",
+      Link: place.link || "",
       Address: addr,
       City: city,
       State: state,
@@ -192,18 +201,19 @@ function showFavoriteButton(place, elevation) {
       Lat: location.lat(),
       Lon: location.lng(),
       Zestimate: "",
-      Zacreage: ""
+      Zacreage: "",
+      Comment: place.comment || ""
     };
 
     alert(`(TODO) Implement this data to Google Sheet:\n${JSON.stringify(data, null, 2)}`);
 
-    fetch('https://script.google.com/macros/s/AKfycby0-PiqADl27Q1cfwSMc1gq4s6yhgBtlPd-RlLXRn2XZWbUSoXMEnIn-zydqCfquaEYkA/exec', {
+    fetch('https://script.google.com/macros/s/AKfycby0-PiqADl27Q1cfwSMc1gq4s6yhgBtlPd-RlLXRn2XZWbUSoXMEnIn-zydqCfquaEYkA/exec?view=favorites', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'text/plain', // 🔥 Bypasses CORS preflight
       },
       body: JSON.stringify({
-        name: data.Name,
+        link: data.Link,
         address: data.Address,
         city: data.City,
         state: data.State,
@@ -211,7 +221,8 @@ function showFavoriteButton(place, elevation) {
         lat: data.Lat,
         lon: data.Lon,
         zestimate: data.Zestimate,
-        zacreage: data.Zacreage
+        zacreage: data.Zacreage,
+        comment: data.Comment
       })
     })
       .then(response => response.json())
