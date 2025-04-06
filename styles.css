@@ -49,7 +49,7 @@ a.map-link {
   body {
     font-family: sans-serif;
     max-width: 600px;
-    margin: 2rem auto;
+    margin: 0 auto;
     padding: 1rem;
   }
   input, button {
