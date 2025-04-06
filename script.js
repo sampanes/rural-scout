@@ -45,6 +45,11 @@ function checkAxolotlStatus(stateName) {
     return;
   }
 
+if (!stateInfo.Note || stateInfo.Note.trim() === "") {
+  console.log(`⚠️ ${stateName} is not G2G but no note provided — skipping alert.`);
+  return;
+}
+
   // If G2G is false or missing
   alert(`⚠️ Axolotl warning for ${stateName}. ${stateInfo.Note || "(no info)"}`);
 }
