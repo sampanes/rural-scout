@@ -205,8 +205,6 @@ function showFavoriteButton(place, elevation) {
       Comment: place.comment || ""
     };
 
-    alert(`(TODO) Implement this data to Google Sheet:\n${JSON.stringify(data, null, 2)}`);
-
     fetch('https://script.google.com/macros/s/AKfycby0-PiqADl27Q1cfwSMc1gq4s6yhgBtlPd-RlLXRn2XZWbUSoXMEnIn-zydqCfquaEYkA/exec?view=favorites', {
       method: 'POST',
       headers: {
