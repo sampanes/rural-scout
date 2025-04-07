@@ -365,15 +365,16 @@ function getElevation(latlng) {
   });
 }
 
-window.addEventListener("DOMContentLoaded", () => {
+function onGoogleMapsReady() {
+  console.log("✅ Google Maps API loaded!");
+  document.querySelector("button").addEventListener("click", lookup);
+}
+
+setTimeout(() => {
   if (typeof google === 'undefined' || !google.maps) {
     document.getElementById('results').innerHTML = `
       <p>⚠️ Google Maps API not loaded. Did you forget to ./fill the API key?</p>
       <p>🗣️ if something breaks, blame John™</p>
     `;
-    return;
   }
-
-  // Safe to attach handlers now
-  document.querySelector("button").addEventListener("click", lookup);
-});
+}, 3000); // 3 seconds should be enough
