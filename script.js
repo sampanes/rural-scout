@@ -88,7 +88,9 @@ function display2ARank(stateName) {
     marker.onclick = () => {
       const modal = document.getElementById("gun-modal");
       const modalText = document.getElementById("gun-modal-text");
-      modalText.textContent = Comment || "No comment available.";
+      modalText.textContent = comment
+  ? `#${rank} state for gun ownership: ${comment}`
+  : "No comment available.";
       modal.style.display = "flex";
     };
   
