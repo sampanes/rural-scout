@@ -88,8 +88,8 @@ function display2ARank(stateName) {
     marker.onclick = () => {
       const modal = document.getElementById("gun-modal");
       const modalText = document.getElementById("gun-modal-text");
-      modalText.textContent = comment
-  ? `#${rank} state for gun ownership: ${comment}`
+      modalText.textContent = Comment
+  ? `#${rank} state for gun ownership: ${Comment} (2024)`
   : "No comment available.";
       modal.style.display = "flex";
     };
@@ -459,4 +459,4 @@ setTimeout(() => {
       <p>🗣️ if something breaks, blame John™</p>
     `;
   }
-}, 3000); // 3 seconds should be enough
+}, 4000); // 4 seconds should be enough
