@@ -1,3 +1,5 @@
+const sheet_data_url = "https://script.google.com/macros/s/AKfycby0-PiqADl27Q1cfwSMc1gq4s6yhgBtlPd-RlLXRn2XZWbUSoXMEnIn-zydqCfquaEYkA/exec"
+
 const cityHeuristics = [
   { maxMinutes: 9, minResults: 5, status: "🧠 Looks like you're IN a city" },
   { maxMinutes: 23, minResults: 5, status: "🧠 You're NEAR a city" },
@@ -6,14 +8,42 @@ const cityHeuristics = [
   { maxMinutes: Infinity, minResults: 0, status: "🧠 You're in the BOONIES" },
 ];
 
+const sheet_tabs_references = {
+    "axolotls": `${sheet_data_url}?view=axolotls`,
+    "2a": `${sheet_data_url}?view=2a`
+}
+
 let axolotlData = {};
+let gunData = {};
+
+window.addEventListener("DOMContentLoaded", () => {
+  loadAxolotlRules();
+  load2ARules();
+});
+
+async function load2ARules() {
+    try {
+        const res = await fetch(sheet_tabs_references["2a"]);
+        const data = await res.json();
+
+        gunData = Object.fromEntries(
+            data.map(entry => {
+                return [entry.State, {
+                    Rank: entry.Rank,
+                    Comment: entry.Comment
+                }];
+            })
+        );
+        console.log("✅ 2A rules loaded and parsed:", gunData);
+    } catch (err) {
+        console.log("❌ Failed to load 2A rules:", err);
+    }
+}
 
 async function loadAxolotlRules() {
   try {
-    const res = await fetch("https://script.google.com/macros/s/AKfycby0-PiqADl27Q1cfwSMc1gq4s6yhgBtlPd-RlLXRn2XZWbUSoXMEnIn-zydqCfquaEYkA/exec?view=axolotls");
+    const res = await fetch(sheet_tabs_references["axolotls"]);
     const data = await res.json();
-
-    console.log("📥 Raw axolotl sheet data:", data);
 
     axolotlData = Object.fromEntries(
       data.map(entry => {
@@ -30,6 +60,51 @@ async function loadAxolotlRules() {
     console.error("❌ Failed to load Axolotl rules:", err);
   }
 }
+
+function display2ARank(stateName) {
+    const barContainer = document.getElementById("gun-bar-container");
+    const marker = document.getElementById("gun-marker");
+    console.log("Display 2A Rank for:", stateName);
+    if (!gunData || !gunData[stateName]) {
+      console.warn("No 2A data for:", stateName);
+      barContainer.style.display = "none";
+      return;
+    }
+  
+    const { Rank, Comment } = gunData[stateName];
+    const rank = parseInt(Rank);
+  
+    if (isNaN(rank)) {
+      console.warn("Invalid rank for", stateName);
+      barContainer.style.display = "none";
+      return;
+    }
+  
+    // Calculate position percentage (1-50 mapped to 0%-100%)
+    const percent = ((rank - 1) / 49) * 100;
+    marker.style.left = `${percent}%`;
+    marker.textContent = `🔫#${rank}`;
+  
+    marker.onclick = () => {
+      const modal = document.getElementById("gun-modal");
+      const modalText = document.getElementById("gun-modal-text");
+      modalText.textContent = Comment || "No comment available.";
+      modal.style.display = "flex";
+    };
+  
+    barContainer.style.display = "block";
+  }
+  
+  // Optional: modal close logic
+  document.getElementById("gun-modal-close").onclick = () => {
+    document.getElementById("gun-modal").style.display = "none";
+  };
+  
+  document.getElementById("gun-modal").addEventListener("click", (e) => {
+    if (e.target.id === "gun-modal") {
+      document.getElementById("gun-modal").style.display = "none";
+    }
+  });
 
 function checkAxolotlStatus(stateName) {
   if (!axolotlData || Object.keys(axolotlData).length === 0) {
@@ -57,10 +132,6 @@ if (!stateInfo.Note || stateInfo.Note.trim() === "") {
   // If G2G is false or missing
   alert(`⚠️ Axolotl warning for ${stateName}. ${stateInfo.Note || "(no info)"}`);
 }
-
-window.addEventListener("DOMContentLoaded", () => {
-  loadAxolotlRules();
-});
 
 function getStateFromPlace(place) {
   if (!place || !place.address_components) return null;
@@ -107,6 +178,7 @@ async function lookup() {
     }
 
     checkAxolotlStatus(getStateFromPlace(place));
+    display2ARank(getStateFromPlace(place));
 
     renderInitialResults(place, elevation, resultsDiv);
     showFavoriteButton(place, elevation);
