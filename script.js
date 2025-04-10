@@ -282,7 +282,7 @@ function showFavoriteButton(place, elevation) {
       Address: addr,
       City: city,
       State: state,
-      Elevation: elevation != null ? `${elevation} ft` : "",
+      Elevation: elevation != null ? elevation : "",
       Lat: location.lat(),
       Lon: location.lng(),
       Zestimate: "",
