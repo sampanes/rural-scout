@@ -145,11 +145,19 @@ function getStateFromPlace(place) {
 
 function extractAddress(text) {
   if (text.includes('zillow.com')) {
+    // First pattern (your original)
     const match = text.match(/\/([0-9a-zA-Z\-]+)-([a-zA-Z\-]+)-([a-zA-Z]{2})-(\d{5})/);
     if (match) {
       return match.slice(1).join(' ').replace(/-/g, ' ');
     }
+
+    // Fallback pattern for URLs with full street name + city + state + zip
+    const fallback = text.match(/\/([\d]+-[a-zA-Z0-9\-]+)-([a-zA-Z\-]+)-([a-zA-Z]{2})-(\d{5})/);
+    if (fallback) {
+      return fallback.slice(1).join(" ").replace(/-/g, " ");
+    }
   }
+
   return text.trim();
 }
   
