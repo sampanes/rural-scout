@@ -130,7 +130,7 @@ a.map-link {
   position: relative;
   height: 30px;
   width: 100%;
-  background: linear-gradient(to right, red, orange, yellow, lightgreen, green);
+  background: linear-gradient(to right, green, #a4c639, yellow, orange, red);
   border-radius: 20px;
 }
 
