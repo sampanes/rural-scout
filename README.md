@@ -23,6 +23,28 @@ Paste a Zillow link or address and instantly get:
 - **Mobile-first, zero-dependency frontend**  
   Clean layout, responsive styles, emoji-coded vibes.
 
+## Vacant land and messy links
+
+Listing links are parsed by `listing.js`, the same rules compound-designer's
+[`scout_parcel.py`](https://github.com/sampanes/compound-designer/blob/main/docs/scouting.md) uses:
+
+- Zillow, Redfin, and Realtor.com links, including app share links. Tracking parameters
+  (`utm_*` and the like) are dropped, and the cleaned link is what gets saved to favorites.
+- Unit markers are removed: `#`, `%23`, an empty `#-`, `APT 3`, `LOT 7`.
+- A street number that is missing or all zeros (`0`, `000`, `0000`) means vacant land with no
+  assigned address. The number is dropped instead of being sent to the geocoder, and the result
+  says the pin is on the street, not the lot.
+- Listing sites often disagree about the ZIP, so the geocoder tries the full line, then without the
+  ZIP, then the city, then the ZIP. When the best hit is only a city or ZIP, the result says the
+  drive times are approximate.
+- For the exact parcel (APN, flood zones, grade, zoning), the results include a ready-to-run
+  `scout_parcel.py` command for compound-designer.
+
+## Tests
+
+`node tests/listing.test.js` checks the listing parser (no dependencies, no network). CI runs it on
+every push.
+
 ## USE
 
 - **try it on mine**

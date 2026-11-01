@@ -145,28 +145,43 @@ function getStateFromPlace(place) {
   return stateComponent ? stateComponent.long_name : null;
 }
 
+// Listing links and addresses are parsed by listing.js (vacant lots, unit markers, tracking links).
 function extractAddress(text) {
-  if (text.includes('zillow.com')) {
-    // First pattern (your original)
-    const match = text.match(/\/([0-9a-zA-Z\-]+)-([a-zA-Z\-]+)-([a-zA-Z]{2})-(\d{5})/);
-    if (match) {
-      return match.slice(1).join(' ').replace(/-/g, ' ');
-    }
+  return Listing.parseListing(text).query || text.trim();
+}
 
-    // Fallback pattern for URLs with full street name + city + state + zip
-    const fallback = text.match(/\/([\d]+-[a-zA-Z0-9\-]+)-([a-zA-Z\-]+)-([a-zA-Z]{2})-(\d{5})/);
-    if (fallback) {
-      return fallback.slice(1).join(" ").replace(/-/g, " ");
+// How precise a geocoder hit really is. An unknown street still comes back OK, as the town.
+function placePrecision(place) {
+  const has = (t) => (place.address_components || []).some(c => c.types.includes(t));
+  if (has("street_number")) return "address";
+  if (has("route")) return "street";
+  if (has("locality")) return "city";
+  if (has("postal_code")) return "ZIP";
+  return "area";
+}
+
+// Try each geocoder query in turn (full line, without the ZIP, city, ZIP) and note when the pin is
+// not the property itself.
+async function geocodeFirst(parsed) {
+  for (const { q, precision } of Listing.geocodeQueries(parsed)) {
+    const place = await getGeocodedPlace(q, { quiet: true, expectNumber: precision === "address" });
+    if (!place) continue;
+    const got = placePrecision(place);
+    if (got === "street" && parsed.vacant) {
+      place.comment = "Vacant land (no street number): the pin is on the street, not the lot.";
+    } else if (got !== "address" && got !== "street") {
+      place.comment = "Street not found: the pin is the " + got + " center, so drive times are approximate.";
     }
+    return place;
   }
-
-  return text.trim();
+  throw '[X] Could not find location.';
 }
   
 async function lookup() {
   document.getElementById('loading').classList.add('visible');
   const rawInput = document.getElementById('input').value;
-  const cleaned = extractAddress(rawInput);
+  const parsed = Listing.parseListing(rawInput);
+  const cleaned = parsed.query || rawInput.trim();
   const resultsDiv = document.getElementById('results');
   resultsDiv.innerHTML = `<p>Looking up: <strong>${cleaned}</strong>...</p>`;
 
@@ -180,12 +195,13 @@ async function lookup() {
   }
 
   try {
-    const place = await getGeocodedPlace(cleaned);
+    const place = await geocodeFirst(parsed);
     const elevation = await getElevation(place.geometry.location);
 
-    if (rawInput.includes("zillow.com")) {
-      place.link = rawInput;
+    if (parsed.url) {
+      place.link = parsed.url; // tracking parameters dropped
     }
+    place.scoutCommand = Listing.scoutCommand(rawInput);
 
     checkAxolotlStatus(getStateFromPlace(place));
     display2ARank(getStateFromPlace(place));
@@ -200,12 +216,16 @@ async function lookup() {
   }
 }
   
-function getGeocodedPlace(address) {
+// opts.quiet: resolve null instead of rejecting when nothing is found.
+// opts.expectNumber: false skips the incomplete-address alert (vacant land, city or ZIP fallback).
+function getGeocodedPlace(address, opts = {}) {
+  const expectNumber = opts.expectNumber !== false;
   return new Promise((resolve, reject) => {
     const geocoder = new google.maps.Geocoder();
     geocoder.geocode({ address }, (results, status) => {
       if (status !== 'OK' || !results.length) {
-        reject('❌ Could not find location.');
+        if (opts.quiet) resolve(null);
+        else reject('[X] Could not find location.');
       } else {
         const place = results[0];
         const components = place.address_components || [];
@@ -213,7 +233,7 @@ function getGeocodedPlace(address) {
         const hasStreetNumber = components.some(c => c.types.includes("street_number"));
         const hasRoute = components.some(c => c.types.includes("route"));
 
-        if (!hasStreetNumber || !hasRoute) {
+        if (expectNumber && (!hasStreetNumber || !hasRoute)) {
           let msg = "⚠️ Address may be incomplete:";
           if (!hasStreetNumber && !hasRoute) {
             msg += " missing street number *and* street name.";
@@ -251,6 +271,18 @@ function renderInitialResults(place, elevation, resultsDiv) {
     <a class="map-link" href="https://www.google.com/maps/search/${encodeURIComponent(typeName)}+near+${lat},${lng}" target="_blank">🔎 Nearby ${typeName}</a>
     <a class="map-link" href="https://www.google.com/maps/search/${fallbackType}+near+${lat},${lng}" target="_blank">🔎 Nearby ${fallbackType}</a>
   `;
+  if (place.comment) {
+    resultsDiv.innerHTML += `<p class="approx-note">${escapeHtml(place.comment)}</p>`;
+  }
+  if (place.scoutCommand) {
+    resultsDiv.innerHTML += `
+      <details class="scout-cmd">
+        <summary>Exact parcel, flood zones, grade, zoning</summary>
+        <p>Run in <a href="https://github.com/sampanes/compound-designer/blob/main/docs/scouting.md" target="_blank">compound-designer</a>:</p>
+        <code>${escapeHtml(place.scoutCommand)}</code>
+      </details>
+    `;
+  }
 }
 
 function showFavoriteButton(place, elevation) {
@@ -432,6 +464,10 @@ function renderMap(originLatLng, destinationLatLng) {
   );
 }
   
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 function getElevation(latlng) {
   return new Promise((resolve, reject) => {
     const elevator = new google.maps.ElevationService();
