@@ -178,3 +178,22 @@ a.map-link {
   font-size: 1.2rem;
   cursor: pointer;
 }
+
+.approx-note {
+  font-size: 0.9rem;
+  color: #8a5a00;
+}
+
+.scout-cmd {
+  margin: 0.75rem 0;
+  font-size: 0.9rem;
+}
+
+.scout-cmd code {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-all;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 4px;
+}
